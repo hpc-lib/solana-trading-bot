@@ -50,11 +50,13 @@ import { version } from './package.json';
 import { WarpTransactionExecutor } from './transactions/warp-transaction-executor';
 import { JitoTransactionExecutor } from './transactions/jito-rpc-transaction-executor';
 
+// 创建与 Solana 链的连接
 const connection = new Connection(RPC_ENDPOINT, {
   wsEndpoint: RPC_WEBSOCKET_ENDPOINT,
   commitment: COMMITMENT_LEVEL,
 });
 
+// 打印详细配置信息
 function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
   logger.info(`  
                                         ..   :-===++++-     
@@ -137,25 +139,31 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
   logger.info('Bot is running! Press CTRL + C to stop it.');
 }
 
+// 启动监听器并运行机器人
 const runListener = async () => {
   logger.level = LOG_LEVEL;
   logger.info('Bot is starting...');
 
   const marketCache = new MarketCache(connection);
   const poolCache = new PoolCache();
+  logger.debug('MarketCache and PoolCache initialized.') ;
   let txExecutor: TransactionExecutor;
 
+  // 根据配置选择合适的交易执行器
   switch (TRANSACTION_EXECUTOR) {
     case 'warp': {
       txExecutor = new WarpTransactionExecutor(CUSTOM_FEE);
+      logger.info(`Using WarpTransactionExecutor with fee: ${CUSTOM_FEE}`);
       break;
     }
     case 'jito': {
       txExecutor = new JitoTransactionExecutor(CUSTOM_FEE, connection);
+      logger.info(`Using JitoTransactionExecutor with fee: ${CUSTOM_FEE}`);
       break;
     }
     default: {
       txExecutor = new DefaultTransactionExecutor(connection);
+      logger.info('Using DefaultTransactionExecutor');
       break;
     }
   }
@@ -199,25 +207,33 @@ const runListener = async () => {
     logger.info('Bot is exiting...');
     process.exit(1);
   }
+  logger.info( 'Bot validation passed.');
 
   if (PRE_LOAD_EXISTING_MARKETS) {
+    logger.info('Preloading existing markets...');
     await marketCache.init({ quoteToken });
+    logger.info('Existing markets preloaded successfully.');
   }
 
   const runTimestamp = Math.floor(new Date().getTime() / 1000);
   const listeners = new Listeners(connection);
+  logger.info('Starting listeners...');
   await listeners.start({
     walletPublicKey: wallet.publicKey,
     quoteToken,
     autoSell: AUTO_SELL,
     cacheNewMarkets: CACHE_NEW_MARKETS,
   });
+  logger.info('Listeners started successfully.');
 
+  // 监听市场变化
   listeners.on('market', (updatedAccountInfo: KeyedAccountInfo) => {
     const marketState = MARKET_STATE_LAYOUT_V3.decode(updatedAccountInfo.accountInfo.data);
     marketCache.save(updatedAccountInfo.accountId.toString(), marketState);
+    logger.debug(`Market updated: ${updatedAccountInfo.accountId.toString()}`);
   });
 
+  // 监听池变化并尝试买入
   listeners.on('pool', async (updatedAccountInfo: KeyedAccountInfo) => {
     const poolState = LIQUIDITY_STATE_LAYOUT_V4.decode(updatedAccountInfo.accountInfo.data);
     const poolOpenTime = parseInt(poolState.poolOpenTime.toString());
@@ -225,18 +241,26 @@ const runListener = async () => {
 
     if (!exists && poolOpenTime > runTimestamp) {
       poolCache.save(updatedAccountInfo.accountId.toString(), poolState);
+      logger.debug(`New pool detected and saved: ${updatedAccountInfo.accountId.toString()}`);
       await bot.buy(updatedAccountInfo.accountId, poolState);
+      logger.info(`Attempting to buy from new pool: ${updatedAccountInfo.accountId.toString()}`);
+    } else {
+      logger.debug(`Pool already exists or is outdated: ${updatedAccountInfo.accountId.toString()}`);
     }
   });
 
+  // 监听钱包变化并尝试卖出
   listeners.on('wallet', async (updatedAccountInfo: KeyedAccountInfo) => {
     const accountData = AccountLayout.decode(updatedAccountInfo.accountInfo.data);
 
     if (accountData.mint.equals(quoteToken.mint)) {
+      logger.debug('Skipping wallet update for quote token account.');
       return;
     }
 
+    logger.debug(`Wallet update detected for mint: ${accountData.mint.toString()}`);
     await bot.sell(updatedAccountInfo.accountId, accountData);
+    logger.info(`Attempting to sell tokens from wallet: ${updatedAccountInfo.accountId.toString()}`);
   });
 
   printDetails(wallet, quoteToken, bot);
