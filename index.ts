@@ -245,7 +245,7 @@ const runListener = async () => {
       await bot.buy(updatedAccountInfo.accountId, poolState);
       logger.info(`Attempting to buy from new pool: ${updatedAccountInfo.accountId.toString()}`);
     } else {
-      logger.debug(`Pool already exists or is outdated: ${updatedAccountInfo.accountId.toString()}`);
+      // logger.debug(`Pool already exists or is outdated: ${updatedAccountInfo.accountId.toString()}`);
     }
   });
 
