@@ -266,4 +266,9 @@ const runListener = async () => {
   printDetails(wallet, quoteToken, bot);
 };
 
-runListener();
+try {
+  runListener();
+} catch (error) {
+  logger.error('An unexpected error occurred in runListener:' , error);
+  process.exit(1);
+}
