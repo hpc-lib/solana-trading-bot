@@ -4,6 +4,12 @@
 LOG_FILE="./start.log"
 PID_FILE="./process.pid"
 
+# 获取实际运行的子进程 PID
+get_actual_pid() {
+  local parent_pid=$1
+  ps -o pid --no-headers --ppid "$parent_pid" | head -n 1
+}
+
 # 启动项目
 start() {
   if [ -f "$PID_FILE" ]; then
@@ -13,8 +19,10 @@ start() {
 
   echo "Starting server..."
   nohup npm run start > "$LOG_FILE" 2>&1 &
-  echo $! > "$PID_FILE"
-  echo "Server started. PID: $(cat $PID_FILE)"
+  parent_pid=$!
+  actual_pid=$(get_actual_pid "$parent_pid")
+  echo "$actual_pid" > "$PID_FILE"
+  echo "Server started. PID: $actual_pid"
 }
 
 # 停止项目
