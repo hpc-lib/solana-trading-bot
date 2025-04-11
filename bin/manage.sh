@@ -20,10 +20,20 @@ start() {
   echo "Starting server..."
   nohup npm run start > "$LOG_FILE" 2>&1 &
   parent_pid=$!
+
+  # 等待 1 秒，确保子进程启动完成
+  sleep 1
+
   actual_pid=$(get_actual_pid "$parent_pid")
+  if [ -z "$actual_pid" ]; then
+    echo "Failed to get the actual PID of the running process."
+    exit 1
+  fi
+
   echo "$actual_pid" > "$PID_FILE"
   echo "Server started. PID: $actual_pid"
 }
+
 
 # 停止项目
 stop() {
