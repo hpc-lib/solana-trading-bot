@@ -1,8 +1,14 @@
 #!/bin/bash
 
-# 定义日志文件路径
-LOG_FILE="./start.log"
+# 定义日志文件路径（包含当天日期和小时，并增加一级文件夹 ./log）
+LOG_DIR="./log"
+LOG_FILE="$LOG_DIR/start_$(date +%Y%m%d_%H).log"
 PID_FILE="./process.pid"
+
+# 确保日志目录存在
+if [ ! -d "$LOG_DIR" ]; then
+  mkdir -p "$LOG_DIR"
+fi
 
 # 获取实际运行的子进程 PID
 get_actual_pid() {
@@ -31,9 +37,8 @@ start() {
   fi
 
   echo "$actual_pid" > "$PID_FILE"
-  echo "Server started. PID: $actual_pid"
+  echo "Server started. PID: $actual_pid, Log file: $LOG_FILE"
 }
-
 
 # 停止项目
 stop() {
