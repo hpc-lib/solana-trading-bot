@@ -25,7 +25,7 @@ stop() {
   fi
 
   echo "Stopping server..."
-  kill -9 $(cat "$PID_FILE")
+  kill $(cat "$PID_FILE")
   rm -f "$PID_FILE"
   echo "Server stopped."
 }
