@@ -240,10 +240,10 @@ const runListener = async () => {
     const exists = await poolCache.get(poolState.baseMint.toString());
 
     if (!exists && poolOpenTime > runTimestamp) {
+      logger.info(`-----------------------------------------------------------`);
       poolCache.save(updatedAccountInfo.accountId.toString(), poolState);
-      logger.debug(`New pool detected and saved: ${updatedAccountInfo.accountId.toString()}`);
+      logger.info(`New pool detected and saved: ${updatedAccountInfo.accountId.toString()}`);
       await bot.buy(updatedAccountInfo.accountId, poolState);
-      logger.info(`Attempting to buy from new pool: ${updatedAccountInfo.accountId.toString()}`);
     } else {
       // logger.debug(`Pool already exists or is outdated: ${updatedAccountInfo.accountId.toString()}`);
     }
